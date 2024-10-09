@@ -1,0 +1,28 @@
+name: Delete microservice
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest 
+    env:
+      VERSION: ${{ github.sha }}
+      AZURE_RG: "bmdk1"
+      AZURE_AKS: "task9project"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - uses: tale/kubectl-action@v1
+        with:
+          base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+          kubectl-version: v1.24.2
+      
+      - name: Delete deployment
+        run: ./scripts/delete.sh

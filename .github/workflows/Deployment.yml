@@ -1,0 +1,78 @@
+name: Deploy microservice
+
+on:
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch: 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest 
+    env:
+      VERSION: ${{ github.sha }}
+      TF_VERSION: '1.0.0'  # Specify Terraform version
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ./scripts/terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        id: terraform
+        working-directory: ./scripts/terraform
+        run: terraform apply -auto-approve
+
+      - name: Retrieve Registry Info from Terraform Outputs
+        id: tf
+        working-directory: ./scripts/terraform
+        run: |
+          echo "ACR_NAME=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
+          echo "ACR_UN=$(terraform output -raw acr_username)" >> $GITHUB_OUTPUT
+          echo "ACR_PW=$(terraform output -raw acr_password)" >> $GITHUB_OUTPUT
+          echo "AZURE_RG=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
+          echo "AZURE_AKS=$(terraform output -raw aks_name)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install docker-compose
+        uses: KengoTODA/actions-setup-docker-compose@v1
+        with:
+          version: '2.14.2'
+
+      - name: Build
+        run: ./scripts/build-image.sh
+
+      - name: Publish
+        env:
+          CONTAINER_REGISTRY: ${{steps.tf.outputs.ACR_NAME}}
+          REGISTRY_UN: ${{steps.tf.outputs.ACR_UN}}
+          REGISTRY_PW: ${{steps.tf.outputs.ACR_PW}}
+        run: ./scripts/push-image.sh
+
+      - uses: tale/kubectl-action@v1
+        with:
+          base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+          kubectl-version: v1.24.2
+    
+      - name: Deploy
+        env:
+          AZURE_RG: ${{steps.tf.outputs.AZURE_RG}}
+          AZURE_AKS: ${{steps.tf.outputs.AZURE_AKS}}
+        run: ./scripts/deploy.sh
