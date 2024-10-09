@@ -55,8 +55,14 @@ jobs:
         with:
           version: '2.14.2'
 
+      - name: Set Execute Permission for Scripts
+        run: chmod +x ./scripts/build-image.sh
+
       - name: Build
         run: ./scripts/build-image.sh
+
+      - name: Set Execute Permission for Scripts
+        run: chmod +x ./scripts/push-image.sh
 
       - name: Publish
         env:
