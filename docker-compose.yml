@@ -1,1 +1,20 @@
-# Your Solution
+version: '3.8'
+
+services:
+  book_catalog:
+    image: book-catalog
+    build: 
+      context: ./book_catalog
+      dockerfile: Dockerfile
+    container_name: book-catalog
+    ports:
+      - "8000:8000" # Maps port 8000 on the host to port 8000 in the container
+   
+  inventory_management:
+    image: inventory-management
+    build:
+      context: ./inventory_management
+      dockerfile: Dockerfile
+    container_name: inventory-management
+    ports:
+      - "8001:8000" # Maps port 8001 on the host to port 8000 in the container
