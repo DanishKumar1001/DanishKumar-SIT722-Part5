@@ -13,6 +13,7 @@ terraform {
 
 provider "azurerm" {
   features {}
+    skip_provider_registration = true
 
   client_id       = "b8194381-7f14-45fa-9076-bf13b9951651"
   tenant_id       = "d02378ec-1688-46d5-8540-1c28b5f470f6"
